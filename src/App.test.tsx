@@ -1,12 +1,17 @@
 import { describe, it, expect } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import App from './App'
 
 describe('App', () => {
+  // プレイヤーのライフポイントを取得するヘルパー関数
+  const getPlayerLifePoints = (playerName: string): string => {
+    const lifePointsElement = screen.getByTestId(`life-points-${playerName}`)
+    return lifePointsElement.textContent || ''
+  }
   it('両プレイヤーの初期ライフポイントが8000で表示される', () => {
     render(<App />)
-    const lifePoints = screen.getAllByText('8000')
-    expect(lifePoints).toHaveLength(2)
+    expect(getPlayerLifePoints('プレイヤー1')).toBe('8000')
+    expect(getPlayerLifePoints('プレイヤー2')).toBe('8000')
   })
 
   it('タイトルが正しく表示される', () => {
@@ -26,9 +31,8 @@ describe('App', () => {
     const damage100Buttons = screen.getAllByText('-100')
     fireEvent.click(damage100Buttons[0]) // プレイヤー1のボタン
     
-    const lifePoints = screen.getAllByText('8000')
-    expect(lifePoints).toHaveLength(1) // プレイヤー2のみ8000
-    expect(screen.getByText('7900')).toBeInTheDocument() // プレイヤー1は7900
+    expect(getPlayerLifePoints('プレイヤー1')).toBe('7900')
+    expect(getPlayerLifePoints('プレイヤー2')).toBe('8000')
   })
 
   it('プレイヤー2のダメージボタンをクリックするとプレイヤー2のライフポイントのみ減少する', () => {
@@ -37,9 +41,8 @@ describe('App', () => {
     const damage100Buttons = screen.getAllByText('-100')
     fireEvent.click(damage100Buttons[1]) // プレイヤー2のボタン
     
-    const lifePoints = screen.getAllByText('8000')
-    expect(lifePoints).toHaveLength(1) // プレイヤー1のみ8000
-    expect(screen.getByText('7900')).toBeInTheDocument() // プレイヤー2は7900
+    expect(getPlayerLifePoints('プレイヤー1')).toBe('8000')
+    expect(getPlayerLifePoints('プレイヤー2')).toBe('7900')
   })
 
   it('複数回ダメージを与えると累積してライフポイントが減少する', () => {
@@ -51,7 +54,7 @@ describe('App', () => {
     fireEvent.click(damage500Buttons[0]) // プレイヤー1に500ダメージ
     fireEvent.click(damage300Buttons[0]) // プレイヤー1に300ダメージ
     
-    expect(screen.getByText('7200')).toBeInTheDocument()
+    expect(getPlayerLifePoints('プレイヤー1')).toBe('7200')
   })
 
   it('ライフポイントが0未満にならない', () => {
@@ -64,7 +67,8 @@ describe('App', () => {
       fireEvent.click(damage1000Buttons[0])
     }
     
-    expect(screen.getByText('0')).toBeInTheDocument()
+    expect(getPlayerLifePoints('プレイヤー1')).toBe('0')
+    expect(getPlayerLifePoints('プレイヤー2')).toBe('8000')
   })
 
   it('個別リセットボタンをクリックすると対象プレイヤーのライフポイントのみ8000に戻る', () => {
@@ -80,9 +84,8 @@ describe('App', () => {
     // プレイヤー1のみリセット
     fireEvent.click(resetButtons[0])
     
-    const lifePoints = screen.getAllByText('8000')
-    expect(lifePoints).toHaveLength(1) // プレイヤー1のみ8000
-    expect(screen.getByText('7000')).toBeInTheDocument() // プレイヤー2は7000のまま
+    expect(getPlayerLifePoints('プレイヤー1')).toBe('8000')
+    expect(getPlayerLifePoints('プレイヤー2')).toBe('7000')
   })
 
   it('両プレイヤーをリセットボタンで両方のライフポイントが8000に戻る', () => {
@@ -98,8 +101,8 @@ describe('App', () => {
     // 両プレイヤーをリセット
     fireEvent.click(resetAllButton)
     
-    const lifePoints = screen.getAllByText('8000')
-    expect(lifePoints).toHaveLength(2)
+    expect(getPlayerLifePoints('プレイヤー1')).toBe('8000')
+    expect(getPlayerLifePoints('プレイヤー2')).toBe('8000')
   })
 
   it('全てのダメージボタンが両プレイヤー分表示される', () => {
@@ -111,5 +114,109 @@ describe('App', () => {
       const buttons = screen.getAllByText(`-${damage}`)
       expect(buttons).toHaveLength(2) // 各ダメージ値のボタンが2つずつ
     })
+  })
+
+  it('カスタムダメージボタンが両プレイヤー分表示される', () => {
+    render(<App />)
+    
+    const customDamageButtons = screen.getAllByText('-')
+    expect(customDamageButtons).toHaveLength(2)
+  })
+
+  it('カスタムダメージボタンをクリックするとモーダルが表示される', () => {
+    render(<App />)
+    
+    const customDamageButtons = screen.getAllByText('-')
+    fireEvent.click(customDamageButtons[0]) // プレイヤー1のボタン
+    
+    const modal = screen.getByTestId('damage-modal-プレイヤー1')
+    expect(within(modal).getByText('プレイヤー1へのダメージ')).toBeInTheDocument()
+    expect(within(modal).getByText('C')).toBeInTheDocument()
+    expect(within(modal).getByText('00')).toBeInTheDocument()
+    expect(within(modal).getByText('決定')).toBeInTheDocument()
+    expect(within(modal).getByText('キャンセル')).toBeInTheDocument()
+  })
+
+  it('モーダルで数値を入力して決定するとダメージが適用される', () => {
+    render(<App />)
+    
+    const customDamageButtons = screen.getAllByText('-')
+    fireEvent.click(customDamageButtons[0])
+    
+    const modal = screen.getByTestId('damage-modal-プレイヤー1')
+    
+    // 2500を入力
+    fireEvent.click(within(modal).getByText('2'))
+    fireEvent.click(within(modal).getByText('5'))
+    fireEvent.click(within(modal).getByText('00'))
+    
+    fireEvent.click(within(modal).getByText('決定'))
+    
+    expect(getPlayerLifePoints('プレイヤー1')).toBe('5500')
+    expect(getPlayerLifePoints('プレイヤー2')).toBe('8000')
+  })
+
+  it('モーダルでキャンセルするとダメージが適用されない', () => {
+    render(<App />)
+    
+    const customDamageButtons = screen.getAllByText('-')
+    fireEvent.click(customDamageButtons[0])
+    
+    const modal = screen.getByTestId('damage-modal-プレイヤー1')
+    
+    fireEvent.click(within(modal).getByText('1'))
+    fireEvent.click(within(modal).getByText('0'))
+    fireEvent.click(within(modal).getByText('0'))
+    fireEvent.click(within(modal).getByText('0'))
+    
+    fireEvent.click(within(modal).getByText('キャンセル'))
+    
+    expect(getPlayerLifePoints('プレイヤー1')).toBe('8000')
+    expect(getPlayerLifePoints('プレイヤー2')).toBe('8000')
+  })
+
+  it('モーダルでCボタンをクリックすると入力がクリアされる', () => {
+    render(<App />)
+    
+    const customDamageButtons = screen.getAllByText('-')
+    fireEvent.click(customDamageButtons[0])
+    
+    const modal = screen.getByTestId('damage-modal-プレイヤー1')
+    const display = screen.getByTestId('damage-input-display-プレイヤー1')
+    
+    fireEvent.click(within(modal).getByText('1'))
+    fireEvent.click(within(modal).getByText('2'))
+    fireEvent.click(within(modal).getByText('3'))
+    
+    // 表示が123になることを確認
+    expect(display.textContent).toBe('123')
+    
+    fireEvent.click(within(modal).getByText('C'))
+    
+    // 表示が0に戻ることを確認
+    expect(display.textContent).toBe('0')
+  })
+
+  it('5桁を超える入力はできない', () => {
+    render(<App />)
+    
+    const customDamageButtons = screen.getAllByText('-')
+    fireEvent.click(customDamageButtons[0])
+    
+    const modal = screen.getByTestId('damage-modal-プレイヤー1')
+    const display = screen.getByTestId('damage-input-display-プレイヤー1')
+    
+    // 5桁入力
+    fireEvent.click(within(modal).getByText('1'))
+    fireEvent.click(within(modal).getByText('2'))
+    fireEvent.click(within(modal).getByText('3'))
+    fireEvent.click(within(modal).getByText('4'))
+    fireEvent.click(within(modal).getByText('5'))
+    
+    expect(display.textContent).toBe('12345')
+    
+    // 6桁目は入力されない
+    fireEvent.click(within(modal).getByText('6'))
+    expect(display.textContent).toBe('12345')
   })
 })

@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import styled from 'styled-components'
+import { DamageInputModal } from './DamageInputModal'
 
 const Section = styled.div`
   background: #f5f5f5;
@@ -35,11 +37,40 @@ const LifePointsValue = styled.div`
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
 `
 
+const DamageButtonsContainer = styled.div`
+  margin-bottom: 1rem;
+`
+
+const CustomDamageButton = styled.button`
+  background: #9c27b0;
+  color: white;
+  border: none;
+  padding: 0.8rem 1.5rem;
+  border-radius: 10px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  margin-bottom: 1rem;
+
+  &:hover {
+    background: #7b1fa2;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+  }
+
+  &:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+`
+
 const DamageButtonsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 0.5rem;
-  margin-bottom: 1rem;
   
   @media (max-width: 480px) {
     grid-template-columns: repeat(3, 1fr);
@@ -106,28 +137,43 @@ interface PlayerSectionProps {
 const damageValues = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
 
 export function PlayerSection({ playerName, lifePoints, onDamage, onReset, playerColor }: PlayerSectionProps) {
+  const [isModalOpen, setIsModalOpen] = useState(false)
+
   return (
     <Section>
       <PlayerName>{playerName}</PlayerName>
       <LifePointsDisplay playerColor={playerColor}>
         <LifePointsLabel>ライフポイント</LifePointsLabel>
-        <LifePointsValue>{lifePoints}</LifePointsValue>
+        <LifePointsValue data-testid={`life-points-${playerName}`}>{lifePoints}</LifePointsValue>
       </LifePointsDisplay>
 
-      <DamageButtonsGrid>
-        {damageValues.map(damage => (
-          <DamageButton
-            key={damage}
-            onClick={() => onDamage(damage)}
-          >
-            -{damage}
-          </DamageButton>
-        ))}
-      </DamageButtonsGrid>
+      <DamageButtonsContainer>
+        <CustomDamageButton onClick={() => setIsModalOpen(true)}>
+          -
+        </CustomDamageButton>
+        
+        <DamageButtonsGrid>
+          {damageValues.map(damage => (
+            <DamageButton
+              key={damage}
+              onClick={() => onDamage(damage)}
+            >
+              -{damage}
+            </DamageButton>
+          ))}
+        </DamageButtonsGrid>
+      </DamageButtonsContainer>
 
       <ResetButton onClick={onReset}>
         リセット
       </ResetButton>
+
+      <DamageInputModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onConfirm={onDamage}
+        playerName={playerName}
+      />
     </Section>
   )
 }
