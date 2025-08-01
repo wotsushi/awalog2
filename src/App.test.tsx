@@ -350,4 +350,170 @@ describe('App', () => {
     fireEvent.click(undoButton)
     expect(getPlayerLifePoints('プレイヤー1')).toBe('8000')
   })
+
+  it('進むボタンが表示される', () => {
+    render(<App />)
+    
+    const redoButton = screen.getByText('進む')
+    expect(redoButton).toBeInTheDocument()
+  })
+
+  it('初期状態では進むボタンが無効化されている', () => {
+    render(<App />)
+    
+    const redoButton = screen.getByText('進む')
+    expect(redoButton).toBeDisabled()
+  })
+
+  it('戻る操作後、進むボタンで再実行できる', () => {
+    render(<App />)
+    
+    // プレイヤー1に500ダメージ
+    const damage500Buttons = screen.getAllByText('-500')
+    fireEvent.click(damage500Buttons[0])
+    expect(getPlayerLifePoints('プレイヤー1')).toBe('7500')
+    
+    // 戻る
+    const undoButton = screen.getByText('戻る')
+    fireEvent.click(undoButton)
+    expect(getPlayerLifePoints('プレイヤー1')).toBe('8000')
+    
+    // 進むボタンが有効になっているか確認
+    const redoButton = screen.getByText('進む')
+    expect(redoButton).not.toBeDisabled()
+    
+    // 進む
+    fireEvent.click(redoButton)
+    expect(getPlayerLifePoints('プレイヤー1')).toBe('7500')
+  })
+
+  it('複数の戻る操作を順番に進むことができる', () => {
+    render(<App />)
+    
+    // 複数の操作を実行
+    const damage300Buttons = screen.getAllByText('-300')
+    const damage500Buttons = screen.getAllByText('-500')
+    const damage200Buttons = screen.getAllByText('-200')
+    
+    fireEvent.click(damage300Buttons[0]) // プレイヤー1: 7700
+    fireEvent.click(damage500Buttons[1]) // プレイヤー2: 7500
+    fireEvent.click(damage200Buttons[0]) // プレイヤー1: 7500
+    
+    const undoButton = screen.getByText('戻る')
+    const redoButton = screen.getByText('進む')
+    
+    // 全て戻る
+    fireEvent.click(undoButton) // プレイヤー1: 7700
+    fireEvent.click(undoButton) // プレイヤー2: 8000
+    fireEvent.click(undoButton) // プレイヤー1: 8000
+    
+    expect(getPlayerLifePoints('プレイヤー1')).toBe('8000')
+    expect(getPlayerLifePoints('プレイヤー2')).toBe('8000')
+    
+    // 順番に進む
+    fireEvent.click(redoButton) // プレイヤー1: 7700
+    expect(getPlayerLifePoints('プレイヤー1')).toBe('7700')
+    expect(getPlayerLifePoints('プレイヤー2')).toBe('8000')
+    
+    fireEvent.click(redoButton) // プレイヤー2: 7500
+    expect(getPlayerLifePoints('プレイヤー1')).toBe('7700')
+    expect(getPlayerLifePoints('プレイヤー2')).toBe('7500')
+    
+    fireEvent.click(redoButton) // プレイヤー1: 7500
+    expect(getPlayerLifePoints('プレイヤー1')).toBe('7500')
+    expect(getPlayerLifePoints('プレイヤー2')).toBe('7500')
+    
+    // redoHistoryが空になったので無効化される
+    expect(redoButton).toBeDisabled()
+  })
+
+  it('新しい操作を行うと進む履歴がクリアされる', () => {
+    render(<App />)
+    
+    const damage500Buttons = screen.getAllByText('-500')
+    const damage300Buttons = screen.getAllByText('-300')
+    
+    // ダメージを与えて戻る
+    fireEvent.click(damage500Buttons[0])
+    const undoButton = screen.getByText('戻る')
+    fireEvent.click(undoButton)
+    
+    const redoButton = screen.getByText('進む')
+    expect(redoButton).not.toBeDisabled()
+    
+    // 新しい操作を行う
+    fireEvent.click(damage300Buttons[0])
+    
+    // 進む履歴がクリアされて無効化される
+    expect(redoButton).toBeDisabled()
+  })
+
+  it('リセット操作も進むで再実行できる', () => {
+    render(<App />)
+    
+    // ダメージを与えてリセット
+    const damage1000Buttons = screen.getAllByText('-1000')
+    fireEvent.click(damage1000Buttons[0])
+    expect(getPlayerLifePoints('プレイヤー1')).toBe('7000')
+    
+    const resetButtons = screen.getAllByText('リセット')
+    fireEvent.click(resetButtons[0])
+    expect(getPlayerLifePoints('プレイヤー1')).toBe('8000')
+    
+    // 戻る
+    const undoButton = screen.getByText('戻る')
+    fireEvent.click(undoButton)
+    expect(getPlayerLifePoints('プレイヤー1')).toBe('7000')
+    
+    // 進む
+    const redoButton = screen.getByText('進む')
+    fireEvent.click(redoButton)
+    expect(getPlayerLifePoints('プレイヤー1')).toBe('8000')
+  })
+
+  it('両プレイヤーをリセットすると進む履歴もクリアされる', () => {
+    render(<App />)
+    
+    // 操作して戻る
+    const damage500Buttons = screen.getAllByText('-500')
+    fireEvent.click(damage500Buttons[0])
+    
+    const undoButton = screen.getByText('戻る')
+    fireEvent.click(undoButton)
+    
+    const redoButton = screen.getByText('進む')
+    expect(redoButton).not.toBeDisabled()
+    
+    // 両プレイヤーをリセット
+    const resetAllButton = screen.getByText('両プレイヤーをリセット')
+    fireEvent.click(resetAllButton)
+    
+    // 進む履歴もクリアされる
+    expect(redoButton).toBeDisabled()
+  })
+
+  it('戻ると進むを交互に実行できる', () => {
+    render(<App />)
+    
+    // ダメージを与える
+    const damage500Buttons = screen.getAllByText('-500')
+    fireEvent.click(damage500Buttons[0])
+    expect(getPlayerLifePoints('プレイヤー1')).toBe('7500')
+    
+    const undoButton = screen.getByText('戻る')
+    const redoButton = screen.getByText('進む')
+    
+    // 戻る → 進む → 戻る → 進む
+    fireEvent.click(undoButton)
+    expect(getPlayerLifePoints('プレイヤー1')).toBe('8000')
+    
+    fireEvent.click(redoButton)
+    expect(getPlayerLifePoints('プレイヤー1')).toBe('7500')
+    
+    fireEvent.click(undoButton)
+    expect(getPlayerLifePoints('プレイヤー1')).toBe('8000')
+    
+    fireEvent.click(redoButton)
+    expect(getPlayerLifePoints('プレイヤー1')).toBe('7500')
+  })
 })
