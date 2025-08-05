@@ -151,6 +151,22 @@ function App() {
     setRedoHistory([]) // 新しい操作を行ったらredoHistoryをクリア
   }
 
+  const handlePlayer1Heal = (heal: number) => {
+    const previousValue = player1LifePoints
+    const newValue = previousValue + heal
+    setPlayer1LifePoints(newValue)
+    setHistory(prev => [...prev, { player: 'player1', previousValue, newValue }])
+    setRedoHistory([]) // 新しい操作を行ったらredoHistoryをクリア
+  }
+
+  const handlePlayer2Heal = (heal: number) => {
+    const previousValue = player2LifePoints
+    const newValue = previousValue + heal
+    setPlayer2LifePoints(newValue)
+    setHistory(prev => [...prev, { player: 'player2', previousValue, newValue }])
+    setRedoHistory([]) // 新しい操作を行ったらredoHistoryをクリア
+  }
+
   const handlePlayer1Reset = () => {
     const previousValue = player1LifePoints
     setPlayer1LifePoints(8000)
@@ -209,6 +225,7 @@ function App() {
           playerName="プレイヤー1"
           lifePoints={player1LifePoints}
           onDamage={handlePlayer1Damage}
+          onHeal={handlePlayer1Heal}
           onReset={handlePlayer1Reset}
           playerColor="primary"
         />
@@ -217,6 +234,7 @@ function App() {
           playerName="プレイヤー2"
           lifePoints={player2LifePoints}
           onDamage={handlePlayer2Damage}
+          onHeal={handlePlayer2Heal}
           onReset={handlePlayer2Reset}
           playerColor="secondary"
         />

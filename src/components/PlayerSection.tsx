@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import styled from 'styled-components'
 import { DamageInputModal } from './DamageInputModal'
+import { HealInputModal } from './HealInputModal'
 
 const Section = styled.div`
   background: #f5f5f5;
@@ -67,6 +68,21 @@ const CustomDamageButton = styled.button`
   }
 `
 
+const CustomButtonsContainer = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+`
+
+const CustomHealButton = styled(CustomDamageButton)`
+  background: #4caf50;
+
+  &:hover {
+    background: #45a049;
+  }
+`
+
 const DamageButtonsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(5, 1fr);
@@ -130,14 +146,16 @@ interface PlayerSectionProps {
   playerName: string
   lifePoints: number
   onDamage: (damage: number) => void
+  onHeal: (heal: number) => void
   onReset: () => void
   playerColor: 'primary' | 'secondary'
 }
 
 const damageValues = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
 
-export function PlayerSection({ playerName, lifePoints, onDamage, onReset, playerColor }: PlayerSectionProps) {
-  const [isModalOpen, setIsModalOpen] = useState(false)
+export function PlayerSection({ playerName, lifePoints, onDamage, onHeal, onReset, playerColor }: PlayerSectionProps) {
+  const [isDamageModalOpen, setIsDamageModalOpen] = useState(false)
+  const [isHealModalOpen, setIsHealModalOpen] = useState(false)
 
   return (
     <Section>
@@ -148,9 +166,14 @@ export function PlayerSection({ playerName, lifePoints, onDamage, onReset, playe
       </LifePointsDisplay>
 
       <DamageButtonsContainer>
-        <CustomDamageButton onClick={() => setIsModalOpen(true)}>
-          -
-        </CustomDamageButton>
+        <CustomButtonsContainer>
+          <CustomDamageButton onClick={() => setIsDamageModalOpen(true)}>
+            -
+          </CustomDamageButton>
+          <CustomHealButton onClick={() => setIsHealModalOpen(true)}>
+            +
+          </CustomHealButton>
+        </CustomButtonsContainer>
         
         <DamageButtonsGrid>
           {damageValues.map(damage => (
@@ -169,9 +192,15 @@ export function PlayerSection({ playerName, lifePoints, onDamage, onReset, playe
       </ResetButton>
 
       <DamageInputModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        isOpen={isDamageModalOpen}
+        onClose={() => setIsDamageModalOpen(false)}
         onConfirm={onDamage}
+        playerName={playerName}
+      />
+      <HealInputModal
+        isOpen={isHealModalOpen}
+        onClose={() => setIsHealModalOpen(false)}
+        onConfirm={onHeal}
         playerName={playerName}
       />
     </Section>

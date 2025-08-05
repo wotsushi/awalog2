@@ -516,4 +516,187 @@ describe('App', () => {
     fireEvent.click(redoButton)
     expect(getPlayerLifePoints('プレイヤー1')).toBe('7500')
   })
+
+  it('+ボタンが両プレイヤー分表示される', () => {
+    render(<App />)
+    
+    const healButtons = screen.getAllByText('+')
+    expect(healButtons).toHaveLength(2)
+  })
+
+  it('+ボタンをクリックすると回復モーダルが表示される', () => {
+    render(<App />)
+    
+    const healButtons = screen.getAllByText('+')
+    fireEvent.click(healButtons[0]) // プレイヤー1のボタン
+    
+    const modal = screen.getByTestId('heal-modal-プレイヤー1')
+    expect(within(modal).getByText('プレイヤー1への回復')).toBeInTheDocument()
+    expect(within(modal).getByText('C')).toBeInTheDocument()
+    expect(within(modal).getByText('00')).toBeInTheDocument()
+    expect(within(modal).getByText('決定')).toBeInTheDocument()
+    expect(within(modal).getByText('キャンセル')).toBeInTheDocument()
+  })
+
+  it('回復モーダルで数値を入力して決定するとライフポイントが増加する', () => {
+    render(<App />)
+    
+    const healButtons = screen.getAllByText('+')
+    fireEvent.click(healButtons[0])
+    
+    const modal = screen.getByTestId('heal-modal-プレイヤー1')
+    
+    // 1500を入力
+    fireEvent.click(within(modal).getByText('1'))
+    fireEvent.click(within(modal).getByText('5'))
+    fireEvent.click(within(modal).getByText('00'))
+    
+    fireEvent.click(within(modal).getByText('決定'))
+    
+    expect(getPlayerLifePoints('プレイヤー1')).toBe('9500')
+    expect(getPlayerLifePoints('プレイヤー2')).toBe('8000')
+  })
+
+  it('回復モーダルでキャンセルするとライフポイントが変化しない', () => {
+    render(<App />)
+    
+    const healButtons = screen.getAllByText('+')
+    fireEvent.click(healButtons[0])
+    
+    const modal = screen.getByTestId('heal-modal-プレイヤー1')
+    
+    fireEvent.click(within(modal).getByText('5'))
+    fireEvent.click(within(modal).getByText('0'))
+    fireEvent.click(within(modal).getByText('0'))
+    
+    fireEvent.click(within(modal).getByText('キャンセル'))
+    
+    expect(getPlayerLifePoints('プレイヤー1')).toBe('8000')
+    expect(getPlayerLifePoints('プレイヤー2')).toBe('8000')
+  })
+
+  it('回復モーダルでCボタンをクリックすると入力がクリアされる', () => {
+    render(<App />)
+    
+    const healButtons = screen.getAllByText('+')
+    fireEvent.click(healButtons[0])
+    
+    const modal = screen.getByTestId('heal-modal-プレイヤー1')
+    const display = screen.getByTestId('heal-input-display-プレイヤー1')
+    
+    fireEvent.click(within(modal).getByText('4'))
+    fireEvent.click(within(modal).getByText('5'))
+    fireEvent.click(within(modal).getByText('6'))
+    
+    expect(display.textContent).toBe('456')
+    
+    fireEvent.click(within(modal).getByText('C'))
+    
+    expect(display.textContent).toBe('0')
+  })
+
+  it('回復操作も戻る/進むで制御できる', () => {
+    render(<App />)
+    
+    // プレイヤー1に1000回復
+    const healButtons = screen.getAllByText('+')
+    fireEvent.click(healButtons[0])
+    
+    const modal = screen.getByTestId('heal-modal-プレイヤー1')
+    fireEvent.click(within(modal).getByText('1'))
+    fireEvent.click(within(modal).getByText('0'))
+    fireEvent.click(within(modal).getByText('00'))
+    fireEvent.click(within(modal).getByText('決定'))
+    
+    expect(getPlayerLifePoints('プレイヤー1')).toBe('9000')
+    
+    // 戻る
+    const undoButton = screen.getByText('戻る')
+    fireEvent.click(undoButton)
+    expect(getPlayerLifePoints('プレイヤー1')).toBe('8000')
+    
+    // 進む
+    const redoButton = screen.getByText('進む')
+    fireEvent.click(redoButton)
+    expect(getPlayerLifePoints('プレイヤー1')).toBe('9000')
+  })
+
+  it('ダメージと回復を混在させても履歴管理が正しく動作する', () => {
+    render(<App />)
+    
+    // プレイヤー1に500ダメージ
+    const damage500Buttons = screen.getAllByText('-500')
+    fireEvent.click(damage500Buttons[0])
+    expect(getPlayerLifePoints('プレイヤー1')).toBe('7500')
+    
+    // プレイヤー1に1000回復
+    const healButtons = screen.getAllByText('+')
+    fireEvent.click(healButtons[0])
+    const healModal = screen.getByTestId('heal-modal-プレイヤー1')
+    fireEvent.click(within(healModal).getByText('1'))
+    fireEvent.click(within(healModal).getByText('0'))
+    fireEvent.click(within(healModal).getByText('00'))
+    fireEvent.click(within(healModal).getByText('決定'))
+    expect(getPlayerLifePoints('プレイヤー1')).toBe('8500')
+    
+    // プレイヤー1に300ダメージ
+    const damage300Buttons = screen.getAllByText('-300')
+    fireEvent.click(damage300Buttons[0])
+    expect(getPlayerLifePoints('プレイヤー1')).toBe('8200')
+    
+    const undoButton = screen.getByText('戻る')
+    
+    // 戻る：300ダメージを取り消し
+    fireEvent.click(undoButton)
+    expect(getPlayerLifePoints('プレイヤー1')).toBe('8500')
+    
+    // 戻る：1000回復を取り消し
+    fireEvent.click(undoButton)
+    expect(getPlayerLifePoints('プレイヤー1')).toBe('7500')
+    
+    // 戻る：500ダメージを取り消し
+    fireEvent.click(undoButton)
+    expect(getPlayerLifePoints('プレイヤー1')).toBe('8000')
+  })
+
+  it('回復で5桁を超える入力はできない', () => {
+    render(<App />)
+    
+    const healButtons = screen.getAllByText('+')
+    fireEvent.click(healButtons[0])
+    
+    const modal = screen.getByTestId('heal-modal-プレイヤー1')
+    const display = screen.getByTestId('heal-input-display-プレイヤー1')
+    
+    // 5桁入力
+    fireEvent.click(within(modal).getByText('9'))
+    fireEvent.click(within(modal).getByText('8'))
+    fireEvent.click(within(modal).getByText('7'))
+    fireEvent.click(within(modal).getByText('6'))
+    fireEvent.click(within(modal).getByText('5'))
+    
+    expect(display.textContent).toBe('98765')
+    
+    // 6桁目は入力されない
+    fireEvent.click(within(modal).getByText('4'))
+    expect(display.textContent).toBe('98765')
+  })
+
+  it('プレイヤー2の回復も正しく動作する', () => {
+    render(<App />)
+    
+    const healButtons = screen.getAllByText('+')
+    fireEvent.click(healButtons[1]) // プレイヤー2のボタン
+    
+    const modal = screen.getByTestId('heal-modal-プレイヤー2')
+    expect(within(modal).getByText('プレイヤー2への回復')).toBeInTheDocument()
+    
+    fireEvent.click(within(modal).getByText('2'))
+    fireEvent.click(within(modal).getByText('0'))
+    fireEvent.click(within(modal).getByText('00'))
+    fireEvent.click(within(modal).getByText('決定'))
+    
+    expect(getPlayerLifePoints('プレイヤー1')).toBe('8000')
+    expect(getPlayerLifePoints('プレイヤー2')).toBe('10000')
+  })
 })
